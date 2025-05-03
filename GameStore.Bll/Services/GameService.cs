@@ -134,84 +134,6 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
         return gameEntity.Id;
     }
 
-    /*public async Task<Guid> AddGameAsync(GameCreateDto request)
-    {
-        request.PlatformIds = FixDuplications(request.PlatformIds);
-        request.GenreIds = FixDuplications(request.GenreIds);
-
-        foreach (var genreId in request.GenreIds)
-        {
-            if (await _repoGenre.CheckGenreIdAsync(genreId) is false)
-            {
-                throw new Exception("Some genres do not exist.");
-            }
-        }
-
-        foreach (var platformId in request.PlatformIds)
-        {
-            if (await _repoPlatform.CheckPlatformIdAsync(platformId) is false)
-            {
-                throw new Exception("Some platforms do not exist.");
-            }
-        }
-
-        var gameEntity = new Game();
-        gameEntity.Name = request.Name;
-        gameEntity.Description = request.Description;
-        gameEntity.GameGenresId = request.GenreIds;
-        gameEntity.GamePlatformsId = request.PlatformIds;
-
-        if (string.IsNullOrEmpty(request.Key) || request.Key.Length < 8)
-        {
-            var clearKey = GenerateGameKey(request.Name);
-            var shortGuid = Guid.NewGuid().ToString("N").Substring(0, 8);
-            clearKey = clearKey + "-" + shortGuid;
-            gameEntity.Key = clearKey;
-        }
-        else
-        {
-            var checker = false;
-            var key = GenerateGameKey(request.Key);
-            try
-            {
-                await _repoGame.GetGameByKeyAsync(key);
-            }
-            catch (Exception ex)
-            {
-                gameEntity.Key = key;
-                checker = true;
-            }
-            if (checker is false)
-            {
-                gameEntity.Key = key;
-                var shortGuid = Guid.NewGuid().ToString("N").Substring(0, 8);
-                gameEntity.Key += "-" + shortGuid;
-            }
-        }
-
-        await _repoGame.AddGameAsync(gameEntity);
-
-        var gameGenre = new GameGenre();
-
-        foreach (var genreId in gameEntity.GameGenresId)
-        {
-            gameGenre.GenreId = genreId;
-            gameGenre.GameId = gameEntity.Id;
-            await _context.GameGenres.AddAsync(gameGenre);
-        }
-
-        var gamePlatform = new GamePlatform();
-
-        foreach (var platform in gameEntity.GamePlatformsId)
-        {
-            gamePlatform.PlatformId = platform;
-            gamePlatform.GameId = gameEntity.Id;
-            await _context.GamePlatforms.AddAsync(gamePlatform);
-        }
-        return gameEntity.Id;
-    }*/
-
-
     public async Task DeleteGameAsync(Guid Id)
     {
         await _repoGame.DeleteGameAsync(Id);
@@ -267,7 +189,6 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
     {
         var games = await _repoGame.GetGamesByGenreIdAsync(genreId);
         return games.Select(_ => _mapper.Map<GameDto>(_)).ToList();
-        //l
     }
 
     public async Task<List<GameDto>> GetGamesByPlatformAsync(Guid platformId)
@@ -402,5 +323,4 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
         }
         return (false, gameById);
     }
-
 }

@@ -50,9 +50,19 @@ public class PlatformRepository(MainContext _mainContext) : IPlatformRepository
         return platform;
     }
 
-    public Task<List<Platform>> GetPlatformsByGameKeyAsync(string key)
+    public async Task<List<Platform>> GetPlatformsByGameKeyAsync(string key)
     {
-        throw new NotImplementedException();
+        var game = await _mainContext.Games.FirstOrDefaultAsync(game => game.Key == key);
+        if (game is null)
+        {
+            throw new Exception();
+        }
+        var platformsOfGame = new List<Platform>();
+        foreach (var _ in game.GamePlatforms)
+        {
+            platformsOfGame.Add(_.Platform);
+        }
+        return platformsOfGame;
     }
 
     public async Task UpdatePlatformAsync(Platform platform)

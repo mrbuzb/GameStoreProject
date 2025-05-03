@@ -67,8 +67,18 @@ public class GenreRepository(MainContext _mainContext) : IGenreRepository
         await _mainContext.SaveChangesAsync();
     }
 
-    public Task<List<Genre>> GetGenresByGameKeyAsync(string key)
+    public async Task<List<Genre>> GetGenresByGameKeyAsync(string key)
     {
-        throw new NotImplementedException();
+        var game = await _mainContext.Games.FirstOrDefaultAsync(game => game.Key == key);
+        if(game is null)
+        {
+            throw new Exception();
+        }
+        var genresOfGame = new List<Genre>();
+        foreach(var _ in game.GameGenres)
+        {
+            genresOfGame.Add(_.Genre);
+        }
+        return genresOfGame;
     }
 }
