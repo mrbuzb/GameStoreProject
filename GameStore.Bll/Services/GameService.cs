@@ -267,6 +267,7 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
     {
         var games = await _repoGame.GetGamesByGenreIdAsync(genreId);
         return games.Select(_ => _mapper.Map<GameDto>(_)).ToList();
+        //l
     }
 
     public async Task<List<GameDto>> GetGamesByPlatformAsync(Guid platformId)
