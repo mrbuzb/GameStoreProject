@@ -105,7 +105,7 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
 
         foreach (var gameggr in gameEntity.GameGenres)
         {
-            gameGenreIds.Add(gameggr.GenreId); 
+            gameGenreIds.Add(gameggr.GenreId);
         }
 
 
@@ -298,13 +298,13 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
                 throw new Exception("Some platforms do not exist.");
         }
 
-        var gameEntity = new Game
-        {
-            Id = request.Id,
-            Name = request.Name,
-            Description = request.Description,
-        };
-        var resultOfKey = await CheckGameKey(gameEntity.Id, request.Key);
+        var gameEntity = await _repoGame.GetGameByIdAsync(request.Id);
+        gameEntity.Id = request.Id;
+        gameEntity.Name = request.Name;
+        gameEntity.Description = request.Description;
+        var checkKey = gameEntity.Key;
+
+        var resultOfKey = await CheckGameKey(gameEntity, checkKey);
 
         if (string.IsNullOrEmpty(request.Key) || request.Key.Length < 8)
         {
@@ -316,7 +316,7 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
         else
         {
 
-            if(resultOfKey.Item1 == true)
+            if (resultOfKey.Item1 == true)
             {
                 gameEntity.Key = request.Key;
             }
@@ -329,23 +329,11 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
             }
         }
 
-        var gameGenreIds = new List<Guid>();
 
-        var gamePlatformIds = new List<Guid>();
 
-        foreach (var gameplt in gameEntity.GamePlatforms)
+        foreach (var genreId in request.GenreIds)
         {
-            gamePlatformIds.Add(gameplt.PlatformId);
-        }
-
-        foreach (var gameggr in gameEntity.GameGenres)
-        {
-            gameGenreIds.Add(gameggr.GenreId);
-        }
-
-        foreach (var genreId in gameGenreIds)
-        {
-            if (resultOfKey.Item2.GameGenres.FirstOrDefault(x=>x.GenreId == genreId) is null)
+            if (resultOfKey.Item2.GameGenres.FirstOrDefault(x => x.GenreId == genreId) is null)
             {
                 var gameGenre = new GameGenre
                 {
@@ -357,11 +345,11 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
 
         }
 
-        foreach(var s in resultOfKey.Item2.GameGenres)
+        foreach (var s in resultOfKey.Item2.GameGenres)
         {
             if (resultOfKey.Item2.GameGenres.FirstOrDefault(x => x.GenreId == s.GenreId) is null)
             {
-                if (!gameGenreIds.Contains(s.GenreId))
+                if (!request.GenreIds.Contains(s.GenreId))
                 {
                     _context.GameGenres.Remove(s);
                 }
@@ -369,7 +357,7 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
         }
 
 
-        foreach (var platformId in gamePlatformIds)
+        foreach (var platformId in request.PlatformIds)
         {
             if (resultOfKey.Item2.GamePlatforms.FirstOrDefault(x => x.PlatformId == platformId) is null)
             {
@@ -386,7 +374,7 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
         {
             if (resultOfKey.Item2.GamePlatforms.FirstOrDefault(x => x.PlatformId == s.PlatformId) is null)
             {
-                if (!gameGenreIds.Contains(s.PlatformId))
+                if (!request.PlatformIds.Contains(s.PlatformId))
                 {
                     _context.GamePlatforms.Remove(s);
                 }
@@ -397,23 +385,21 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
         await _context.SaveChangesAsync();
     }
 
-    private async Task<(bool,Game)> CheckGameKey(Guid gameId, string gameKey)
+    private async Task<(bool, Game)> CheckGameKey(Game gameById, string gameKey)
     {
-        Game gameByKey = new Game() { Key ="",};
+        Game gameByKey = new Game() { Key = "", };
         try
         {
-             gameByKey = await _repoGame.GetGameByKeyAsync(gameKey);
+            gameByKey = await _repoGame.GetGameByKeyAsync(gameKey);
         }
         catch (Exception ex)
         {
         }
-        var gameById = await _repoGame.GetGameByIdAsync(gameId);
-
         if (gameByKey.Id == gameById.Id)
         {
-            return (true,gameById);
+            return (true, gameById);
         }
-        return (false,gameById);
+        return (false, gameById);
     }
 
 }
