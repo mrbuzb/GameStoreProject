@@ -6,42 +6,17 @@ using GameStore.Bll.Dto_s;
 using GameStore.Dal;
 using GameStore.Dal.Entities;
 using GameStore.Repository.Services;
+using Microsoft.EntityFrameworkCore.Metadata.Internal;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace GameStore.Bll.Services;
 
-public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPlatform, IGenreRepository _repoGenre, MainContext _context, IMapper _mapper) : IGameService
+public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPlatform, IGenreRepository _repoGenre, MainContext _context, IMapper _mapper,IMemoryCache _cache) : IGameService
 {
-
-    private string GenerateGameKey(string name)
-    {
-        var slug = name.ToLower()
-                       .Replace(" ", "-")
-                       .Replace(":", "")
-                       .Replace(",", "")
-                       .Replace(".", "")
-                       .Replace("'", "")
-                       .Replace("\"", "")
-                       .Replace("&", "and");
-        return slug;
-    }
-
-    private List<Guid> FixDuplications(List<Guid> ids)
-    {
-        var uniqueIds = new List<Guid>();
-        foreach (var id in ids)
-        {
-            if (!uniqueIds.Contains(id))
-            {
-                uniqueIds.Add(id);
-            }
-        }
-        return uniqueIds;
-    }
-
-
-
+    private const string _cacheKey = "games_list";
     public async Task<Guid> AddGameAsync(GameCreateDto request)
     {
+        //Validation
         request.PlatformIds = FixDuplications(request.PlatformIds);
         request.GenreIds = FixDuplications(request.GenreIds);
 
@@ -56,7 +31,7 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
             if (!await _repoPlatform.CheckPlatformIdAsync(platformId))
                 throw new Exception("Some platforms do not exist.");
         }
-
+        //Validation
         var gameEntity = new Game
         {
             Name = request.Name,
@@ -130,26 +105,43 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
         }
 
         await _context.SaveChangesAsync();
-
+        await RefreshMusicCacheAsync();
         return gameEntity.Id;
     }
 
     public async Task DeleteGameAsync(Guid Id)
     {
         await _repoGame.DeleteGameAsync(Id);
+        await RefreshMusicCacheAsync();
     }
 
     public async Task<List<GameDto>> GetAllGamesAsync()
     {
+        if (_cache.TryGetValue(_cacheKey, out List<Game> cachedGames))
+        {
+            return cachedGames!.Select(x=>_mapper.Map<GameDto>(x)).ToList();
+        }
+
+
         var games = await _repoGame.GetAllGamesAsync();
 
         var gameDtos = games.Select(x => _mapper.Map<GameDto>(x)).ToList();
+
+        _cache.Set(_cacheKey, games, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1)
+        });
 
         return gameDtos;
     }
 
     public async Task<GameDto> GetGameByIdAsync(Guid id)
     {
+        if (_cache.TryGetValue(_cacheKey, out List<Game> cachedGames))
+        {
+            var gameDtos = cachedGames!.Select(x => _mapper.Map<GameDto>(x)).ToList();
+            return gameDtos!.FirstOrDefault(_ => _.Id == id) ?? throw new ArgumentNullException();
+        }
         var game = await _repoGame.GetGameByIdAsync(id);
 
         return _mapper.Map<GameDto>(game);
@@ -157,13 +149,26 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
 
     public async Task<GameDto> GetGameByKeyAsync(string key)
     {
+        if (_cache.TryGetValue(_cacheKey, out List<Game> cachedGames))
+        {
+            var gameDtos = cachedGames!.Select(x => _mapper.Map<GameDto>(x)).ToList();
+            return gameDtos!.FirstOrDefault(_ => _.Key == key) ?? throw new ArgumentNullException();
+        }
         var game = await _repoGame.GetGameByKeyAsync(key);
         return _mapper.Map<GameDto>(game);
     }
 
     public async Task<byte[]> GetGameFileAsync(Guid id)
     {
-        var game = await _repoGame.GetGameByIdAsync(id);
+        Game game;
+        if (_cache.TryGetValue(_cacheKey, out List<Game> cachedGames))
+        {
+            game =  cachedGames!.FirstOrDefault(x => x.Id == id) ?? throw new ArgumentNullException("Game by id not found");
+        }
+        else
+        {
+            game = await _repoGame.GetGameByIdAsync(id);
+        }
 
         var options = new JsonSerializerOptions
         {
@@ -200,6 +205,7 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
 
     public async Task UpdateGameAsync(UpdateGameDto request)
     {
+        //Validation
         if (request is null)
         {
             throw new Exception();
@@ -219,6 +225,7 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
             if (!await _repoPlatform.CheckPlatformIdAsync(platformId))
                 throw new Exception("Some platforms do not exist.");
         }
+        //Validation
 
         var gameEntity = await _repoGame.GetGameByIdAsync(request.Id);
         gameEntity.Id = request.Id;
@@ -305,7 +312,36 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
 
         await _repoGame.UpdateGameAsync(gameEntity);
         await _context.SaveChangesAsync();
+        await RefreshMusicCacheAsync();
     }
+
+
+    private List<Guid> FixDuplications(List<Guid> ids)
+    {
+        var uniqueIds = new List<Guid>();
+        foreach (var id in ids)
+        {
+            if (!uniqueIds.Contains(id))
+            {
+                uniqueIds.Add(id);
+            }
+        }
+        return uniqueIds;
+    }
+
+    private string GenerateGameKey(string name)
+    {
+        var slug = name.ToLower()
+                       .Replace(" ", "-")
+                       .Replace(":", "")
+                       .Replace(",", "")
+                       .Replace(".", "")
+                       .Replace("'", "")
+                       .Replace("\"", "")
+                       .Replace("&", "and");
+        return slug;
+    }
+
 
     private async Task<(bool, Game)> CheckGameKey(Game gameById, string gameKey)
     {
@@ -323,4 +359,16 @@ public class GameService(IGameRepository _repoGame, IPlatformRepository _repoPla
         }
         return (false, gameById);
     }
+
+    private async Task RefreshMusicCacheAsync()
+    {
+        var gamesEntities = await _repoGame.GetAllGamesAsync();
+
+        _cache.Set(_cacheKey, gamesEntities, new MemoryCacheEntryOptions
+        {
+            AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(1)
+        });
+    }
+
+
 }

@@ -18,5 +18,7 @@ public static class DependecyConfiguration
         builder.Services.AddScoped<MainContext>();
         builder.Services.AddSingleton(new TelegramLogger("8058296814:AAGmLEzCcbukiRiqqqh7IW6Oh4YfXQ6YvkM", "-1002579719825"));
         builder.Services.AddAutoMapper(typeof(GameProfile));
+        builder.Services.AddAutoMapper(typeof(GenreProfiles));
+        builder.Services.AddAutoMapper(typeof(PlatformProfile));
     }
 }

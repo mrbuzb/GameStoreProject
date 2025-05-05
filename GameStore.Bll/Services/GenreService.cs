@@ -1,31 +1,27 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using AutoMapper;
 using GameStore.Bll.Dto_s;
 using GameStore.Dal.Entities;
 using GameStore.Repository.Services;
 
 namespace GameStore.Bll.Services;
 
-public class GenreService(IGenreRepository _genreRepo) : IGenreService
+public class GenreService(IGenreRepository _genreRepo, IMapper _mapper) : IGenreService
 {
     public async Task<Guid> AddGenreAsync(GenreCreateDto request)
     {
-        if(request.Name is null)
+        if (request.Name is null)
         {
             throw new ArgumentNullException("Genre name is required");
         }
         var genre = new Genre();
         genre.Name = request.Name;
-        if(request.ParentGenreId != null)
+        if (request.ParentGenreId != null)
         {
             try
             {
                 await _genreRepo.GetGenreByIdAsync(request.ParentGenreId.Value);
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
                 throw new Exception("Parent Genre Not Found");
             }
@@ -48,33 +44,48 @@ public class GenreService(IGenreRepository _genreRepo) : IGenreService
     }
 
 
-    public async Task<List<GenreDto>> GetGenresByGameKeyAsync(string key)
+    public async Task<List<GenreGetDto>> GetGenresByGameKeyAsync(string key)
     {
-        throw new NotImplementedException();
+        var genres = await _genreRepo.GetGenresByGameKeyAsync(key);
+        return genres.Select(x => _mapper.Map<GenreGetDto>(x)).ToList();
     }
 
-    public Task DeleteGenreAsync(Guid id)
+    public async Task DeleteGenreAsync(Guid id)
     {
-        throw new NotImplementedException();
+        await _genreRepo.DeleteAsync(id);
     }
 
-    public Task<IEnumerable<GenreDto>> GetAllGenresAsync()
+    public async Task<List<GenreGetDto>> GetAllGenresAsync()
     {
-        throw new NotImplementedException();
+        var genres = await _genreRepo.GetAllGenreAsync();
+        return genres.Select(x => _mapper.Map<GenreGetDto>(x)).ToList();
     }
 
-    public Task<GenreDto> GetGenreByIdAsync(Guid id)
+    public async Task<GenreDto> GetGenreByIdAsync(Guid id)
     {
-        throw new NotImplementedException();
+        var genre = await _genreRepo.GetGenreByIdAsync(id);
+        return _mapper.Map<GenreDto>(genre);
     }
 
-    public Task<IEnumerable<GenreDto>> GetGenresByParentIdAsync(Guid parentId)
+    public async Task<List<GenreGetDto>> GetGenresByParentIdAsync(Guid parentId)
     {
-        throw new NotImplementedException();
+        var genres = await _genreRepo.GetGenreByParentIdAsync(parentId);
+        return genres.Select(x => _mapper.Map<GenreGetDto>(x)).ToList();
     }
 
-    public Task UpdateGenreAsync(GenreDto request)
+    public async Task UpdateGenreAsync(GenreDto request)
     {
-        throw new NotImplementedException();
+        var oldGenre = await _genreRepo.GetGenreByIdAsync(request.Id);
+
+        if (request.ParentGenreId is not null)
+        {
+            if (await _genreRepo.GetGenreByIdAsync(request.ParentGenreId!.Value) is null)
+            {
+                throw new Exception();
+            }
+        }
+        oldGenre.ParentGenreId = request.ParentGenreId;
+        oldGenre.Name = request.Name;
+        await _genreRepo.UpdateAsync(oldGenre);
     }
 }

@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.Repository.Services;
 
-public class PlatformRepository(MainContext _mainContext) : IPlatformRepository
+public class PlatformRepository(MainContext _mainContext,IGameRepository _gameRepo) : IPlatformRepository
 {
     public async Task<Guid> AddPlatformAsync(Platform platform)
     {
@@ -52,7 +52,7 @@ public class PlatformRepository(MainContext _mainContext) : IPlatformRepository
 
     public async Task<List<Platform>> GetPlatformsByGameKeyAsync(string key)
     {
-        var game = await _mainContext.Games.FirstOrDefaultAsync(game => game.Key == key);
+        var game = await _gameRepo.GetGameByKeyAsync(key);
         if (game is null)
         {
             throw new Exception();

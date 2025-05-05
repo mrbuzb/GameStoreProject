@@ -27,6 +27,17 @@ namespace GameStore.Server.Controllers
             return gameDTO;
         }
 
+        [HttpPut("update-game")]
+        public async Task UpdateGame(UpdateGameDto game)
+        {
+            await _gameService.UpdateGameAsync(game);
+        }
+        [HttpDelete("dellete-game")]
+        public async Task DeleteGame(Guid id)
+        {
+            await _gameService.DeleteGameAsync(id);
+        }
+
 
         [HttpGet("get-games")]
         public async Task<List<GameDto>> GetAllGamesAsync()
@@ -73,15 +84,6 @@ namespace GameStore.Server.Controllers
         {
             return await _gameService.GetGamesByPlatformAsync(platformId);
         }
-        [HttpPut("update-game")]
-        public async Task UpdateGame(UpdateGameDto game)
-        {
-            await _gameService.UpdateGameAsync(game);
-        }
-        [HttpDelete("dellete-game")]
-        public async Task DeleteGame(Guid id)
-        {
-            await _gameService.DeleteGameAsync(id);
-        }
+        
     }
 }

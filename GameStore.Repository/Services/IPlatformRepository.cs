@@ -12,5 +12,4 @@ public interface IPlatformRepository
     Task<Guid> CheckPlatformType(string type);
     Task<List<Platform>> GetPlatformsByGameKeyAsync(string key);
     Task DeletePlatformAsync(Guid Id);
-
 }

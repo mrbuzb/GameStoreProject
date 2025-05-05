@@ -22,7 +22,7 @@ namespace GameStore.Server
             builder.ConfigureDatabase();
             builder.ConfigureDependencies();
             builder.ConfigureLogger();
-
+            builder.Services.AddMemoryCache();
             var app = builder.Build();
             app.UseMiddleware<GlobalExeptionHandling>();
             // Configure the HTTP request pipeline.
@@ -31,6 +31,7 @@ namespace GameStore.Server
                 app.UseSwagger();
                 app.UseSwaggerUI();
             }
+            app.UseResponseCaching();
 
             app.UseHttpsRedirection();
 

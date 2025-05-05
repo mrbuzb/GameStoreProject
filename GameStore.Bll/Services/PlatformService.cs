@@ -3,13 +3,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using AutoMapper;
 using GameStore.Bll.Dto_s;
 using GameStore.Dal.Entities;
 using GameStore.Repository.Services;
 
 namespace GameStore.Bll.Services;
 
-public class PlatformService(IPlatformRepository _platformRepo) : IPlatformService
+public class PlatformService(IPlatformRepository _platformRepo,IMapper _mapper) : IPlatformService
 {
     public async Task<Guid> AddPlatformAsync(PlatformCreateDto request)
     {
@@ -32,28 +33,35 @@ public class PlatformService(IPlatformRepository _platformRepo) : IPlatformServi
         return id;
     }
 
-    public Task DeletePlatformAsync(Guid id)
+    public async Task DeletePlatformAsync(Guid id)
     {
-        throw new NotImplementedException();
+        await _platformRepo.DeletePlatformAsync(id);
     }
 
-    public Task<IEnumerable<PlatformDto>> GetAllPlatformsAsync()
+    public async Task<List<PlatformDto>> GetAllPlatformsAsync()
     {
-        throw new NotImplementedException();
+        var platforms = await _platformRepo.GetAllPlatformAsync();
+        return platforms.Select(x=>_mapper.Map<PlatformDto>(x)).ToList();
     }
 
-    public Task<PlatformDto> GetPlatformByIdAsync(Guid id)
+    public async Task<PlatformDto> GetPlatformByIdAsync(Guid id)
     {
-        throw new NotImplementedException();
+        var platform = await _platformRepo.GetPlatformByIdAsync(id);
+        return _mapper.Map<PlatformDto>(platform);
     }
 
-    public Task<List<PlatformDto>> GetPlatformsByGameKeyAsync(string key)
+    public async Task<List<PlatformDto>> GetPlatformsByGameKeyAsync(string key)
     {
-        throw new NotImplementedException();
+        var platforms = await _platformRepo.GetPlatformsByGameKeyAsync(key);
+        return platforms.Select(x=>_mapper.Map<PlatformDto>(x)).ToList();
     }
 
-    public Task UpdatePlatformAsync(PlatformDto request)
+    public async Task UpdatePlatformAsync(PlatformDto request)
     {
-        throw new NotImplementedException();
+        var platform = await _platformRepo.GetPlatformByIdAsync(request.Id);
+        platform.Type = request.Type;
+        await _platformRepo.UpdatePlatformAsync(platform);
     }
+
+
 }

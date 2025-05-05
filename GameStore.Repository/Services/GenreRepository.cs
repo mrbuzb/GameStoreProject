@@ -4,7 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace GameStore.Repository.Services;
 
-public class GenreRepository(MainContext _mainContext) : IGenreRepository
+public class GenreRepository(MainContext _mainContext,IGameRepository _gameRepo) : IGenreRepository
 {
 
     public async Task AddAsync(Genre genre)
@@ -46,8 +46,8 @@ public class GenreRepository(MainContext _mainContext) : IGenreRepository
 
     public async Task<Genre> GetGenreByIdAsync(Guid id)
     {
-        var genre =  await _mainContext.Genres.FindAsync(id);
-        if(genre != null)
+        var genre =  await _mainContext.Genres.FirstOrDefaultAsync(x=>x.Id == id);
+        if(genre == null)
         {
             throw new Exception();
         }
@@ -69,7 +69,7 @@ public class GenreRepository(MainContext _mainContext) : IGenreRepository
 
     public async Task<List<Genre>> GetGenresByGameKeyAsync(string key)
     {
-        var game = await _mainContext.Games.FirstOrDefaultAsync(game => game.Key == key);
+        var game = await _gameRepo.GetGameByKeyAsync(key);
         if(game is null)
         {
             throw new Exception();

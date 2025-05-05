@@ -82,7 +82,7 @@ public class GameRepository(MainContext _mainContext) : IGameRepository
 
     public async Task<Game> GetGameByKeyAsync(string key)
     {
-        var game = await _mainContext.Games.Include(g => g.GamePlatforms).Include(c => c.GameGenres).FirstOrDefaultAsync(x => x.Key == key);
+        var game = await _mainContext.Games.Include(g => g.GamePlatforms).ThenInclude(pp=>pp.Platform).Include(c => c.GameGenres).ThenInclude(gg=>gg.Genre).FirstOrDefaultAsync(x => x.Key == key);
         if (game == null)
         {
             throw new Exception();
@@ -108,6 +108,7 @@ public class GameRepository(MainContext _mainContext) : IGameRepository
                 .ThenInclude(g => g.GameGenres)
                 .Select(gg => gg.Game)
                 .ToListAsync();
+
         foreach (var game in games)
         {
             if (game.GameGenres != null)
